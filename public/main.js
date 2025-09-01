@@ -12,10 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const spinner = document.getElementById('spinner');
     const previewArea = document.getElementById('previewArea');
 
-    // --- 상태 변수 ---
+    // --- 상태 변수 및 중요 설정 ---
     const selectedProblemIds = new Set();
     let debounceTimeout;
     let generatedMarkdownContent = '';
+
+    // ✨ --- 여기가 핵심! Vercel의 전체 주소를 사용합니다 --- ✨
+    // 본인의 Vercel Production 주소로 반드시 교체해주세요!
+    // 예: 'https://boj-crawler-tw6o7k5il-kim-dohoons-projects.vercel.app/api/proxy?url='
+    const VERCEL_PROXY_URL = 'https://boj-crawler-lqxji9hgz-kim-dohoons-projects.vercel.app/api/proxy?url=';
+
 
     // --- 이벤트 리스너 ---
 
@@ -129,10 +135,95 @@ document.addEventListener('DOMContentLoaded', () => {
         else selectedProblemsContainer.insertBefore(draggingItem, afterElement);
     });
 
-
     // --- 함수 정의 ---
 
-    // ✨ (핵심) HTML을 조건부로 마크다운 변환하는 최종 파서
+    async function searchProblemsAPI(query) {
+        statusDiv.textContent = `"${query}" 검색 중...`;
+        try {
+            const solvedAcUrl = `https://solved.ac/api/v3/search/problem?query=${encodeURIComponent(query)}&page=1&sort=id`;
+            const response = await fetch(VERCEL_PROXY_URL + solvedAcUrl);
+            if (!response.ok) throw new Error('API 검색에 실패했습니다.');
+            const data = await response.json();
+            displaySearchResults(data.items.slice(0, 5));
+            statusDiv.textContent = '';
+        } catch (error) {
+            console.error('API 검색 오류:', error);
+            statusDiv.textContent = '검색 중 오류가 발생했습니다.';
+            searchResultsContainer.style.display = 'none';
+        }
+    }
+    
+    function displaySearchResults(problems) {
+        searchResultsContainer.innerHTML = '';
+        if (!problems || problems.length === 0) {
+            searchResultsContainer.style.display = 'none';
+            return;
+        }
+        problems.forEach(problem => {
+            const tierInfo = mapLevelToTierInfo(problem.level);
+            const tierIconHtml = `<img src="${tierInfo.tierIcon}" class="tier-icon" alt="${tierInfo.tierName}">`;
+            const resultItem = document.createElement('div');
+            resultItem.innerHTML = `${tierIconHtml} <span>${problem.problemId}</span> ${problem.titleKo}`;
+            resultItem.dataset.id = problem.problemId;
+            resultItem.dataset.title = problem.titleKo;
+            resultItem.dataset.level = problem.level;
+            searchResultsContainer.appendChild(resultItem);
+        });
+        searchResultsContainer.style.display = 'block';
+    }
+
+    function addProblemToSelection(id, title, level) {
+        if (selectedProblemIds.has(id)) {
+            alert('이미 추가된 문제입니다.');
+            return;
+        }
+        selectedProblemIds.add(id);
+        const tierInfo = mapLevelToTierInfo(level);
+        const tierIconHtml = `<img src="${tierInfo.tierIcon}" class="selected-item-icon" alt="${tierInfo.tierName}">`;
+        const listItem = document.createElement('li');
+        listItem.dataset.id = id;
+        listItem.draggable = true;
+        listItem.innerHTML = `<div class="selected-item-info">${tierIconHtml}<span>${id} - ${title}</span></div><button class="delete-btn">×</button>`;
+        selectedProblemsContainer.appendChild(listItem);
+    }
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    async function fetchProblemData(problemId) {
+        const bojUrl = `https://www.acmicpc.net/problem/${problemId}`;
+        const response = await fetch(VERCEL_PROXY_URL + bojUrl);
+        if (!response.ok) throw new Error(`BOJ ${problemId}번 크롤링 실패 (상태 코드: ${response.status})`);
+        
+        const htmlString = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlString, 'text/html');
+        const title = doc.querySelector('#problem_title')?.innerText || '제목 없음';
+        if (title === '제목 없음') throw new Error(`${problemId}번은 존재하지 않는 문제입니다.`);
+
+        return {
+            id: problemId,
+            title,
+            description: hybridHtmlParser(doc.querySelector('#problem_description')),
+            inputDesc: hybridHtmlParser(doc.querySelector('#problem_input')),
+            outputDesc: hybridHtmlParser(doc.querySelector('#problem_output')),
+            examples: Array.from(doc.querySelectorAll('[id^="sample-input-"]')).map((inputEl, i) => {
+                const outputEl = doc.querySelector(`#sample-output-${i + 1}`);
+                return { input: inputEl.innerText.trim(), output: outputEl ? outputEl.innerText.trim() : '' };
+            })
+        };
+    }
+
     function hybridHtmlParser(element) {
         if (!element) return '';
         let result = '';
@@ -143,10 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tagName = node.tagName.toLowerCase();
                 switch (tagName) {
                     case 'p':
-                        // p 태그 안에 img 태그가 있으면 HTML 그대로 유지
                         if (node.querySelector('img')) {
                             result += node.outerHTML;
-                        } else { // 아니면 순수 텍스트 + 줄바꿈으로
+                        } else {
                             result += hybridHtmlParser(node).trim() + '\n\n';
                         }
                         break;
@@ -189,32 +279,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return result;
     }
 
-    async function fetchProblemData(problemId) {
-        const proxyUrl = '/api/proxy?url=';
-        const bojUrl = `https://www.acmicpc.net/problem/${problemId}`;
-        const response = await fetch(proxyUrl + bojUrl);
-        if (!response.ok) throw new Error(`BOJ ${problemId}번 크롤링 실패 (상태 코드: ${response.status})`);
-        
-        const htmlString = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlString, 'text/html');
-
-        const title = doc.querySelector('#problem_title')?.innerText || '제목 없음';
-        if (title === '제목 없음') throw new Error(`${problemId}번은 존재하지 않는 문제입니다.`);
-
-        return {
-            id: problemId,
-            title,
-            description: hybridHtmlParser(doc.querySelector('#problem_description')),
-            inputDesc: hybridHtmlParser(doc.querySelector('#problem_input')),
-            outputDesc: hybridHtmlParser(doc.querySelector('#problem_output')),
-            examples: Array.from(doc.querySelectorAll('[id^="sample-input-"]')).map((inputEl, i) => {
-                const outputEl = doc.querySelector(`#sample-output-${i + 1}`);
-                return { input: inputEl.innerText.trim(), output: outputEl ? outputEl.innerText.trim() : '' };
-            })
-        };
+    async function fetchTierData(problemId) {
+        const solvedAcUrl = `https://solved.ac/api/v3/problem/show?problemId=${problemId}`;
+        const response = await fetch(VERCEL_PROXY_URL + solvedAcUrl);
+        if (!response.ok) {
+            console.warn(`Solved.ac에서 ${problemId}번 티어 정보 가져오기 실패`);
+            return { tierName: "정보 없음", tierIcon: "" };
+        }
+        const data = await response.json();
+        return mapLevelToTierInfo(data.level);
     }
 
+    function mapLevelToTierInfo(level) {
+        if (level === 0) return { tierName: "Unrated", tierIcon: "https://static.solved.ac/tier_small/0.svg" };
+        const tiers = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
+        const roman = ["V", "IV", "III", "II", "I"];
+        const tierName = `${tiers[Math.floor((level - 1) / 5)]} ${roman[(level - 1) % 5]}`;
+        const tierIcon = `https://static.solved.ac/tier_small/${level}.svg`;
+        return { tierName, tierIcon };
+    }
+    
     function generateMarkdownForAllProblems(problems) {
         return problems.map(p => {
             const tierCell = p.tierIcon ? `<img src="${p.tierIcon}" width="20px" height="20px" style="vertical-align: middle;"> ${p.tierName}` : p.tierName;
@@ -235,86 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return JSON.stringify({ cells, metadata: {}, nbformat: 4, nbformat_minor: 5 }, null, 2);
     }
-    
-    async function searchProblemsAPI(query) {
-        statusDiv.textContent = `"${query}" 검색 중...`;
-        try {
-            const proxyUrl = '/api/proxy?url=';
-            const solvedAcUrl = `https://solved.ac/api/v3/search/problem?query=${encodeURIComponent(query)}&page=1&sort=id`;
-            const response = await fetch(proxyUrl + solvedAcUrl);
-            if (!response.ok) throw new Error('API 검색에 실패했습니다.');
-            const data = await response.json();
-            displaySearchResults(data.items.slice(0, 5));
-            statusDiv.textContent = '';
-        } catch (error) {
-            console.error('API 검색 오류:', error);
-            statusDiv.textContent = '검색 중 오류가 발생했습니다.';
-            searchResultsContainer.style.display = 'none';
-        }
-    }
-    function displaySearchResults(problems) {
-        searchResultsContainer.innerHTML = '';
-        if (!problems || problems.length === 0) {
-            searchResultsContainer.style.display = 'none';
-            return;
-        }
-        problems.forEach(problem => {
-            const tierInfo = mapLevelToTierInfo(problem.level);
-            const tierIconHtml = `<img src="${tierInfo.tierIcon}" class="tier-icon" alt="${tierInfo.tierName}">`;
-            const resultItem = document.createElement('div');
-            resultItem.innerHTML = `${tierIconHtml} <span>${problem.problemId}</span> ${problem.titleKo}`;
-            resultItem.dataset.id = problem.problemId;
-            resultItem.dataset.title = problem.titleKo;
-            resultItem.dataset.level = problem.level;
-            searchResultsContainer.appendChild(resultItem);
-        });
-        searchResultsContainer.style.display = 'block';
-    }
-    function addProblemToSelection(id, title, level) {
-        if (selectedProblemIds.has(id)) {
-            alert('이미 추가된 문제입니다.');
-            return;
-        }
-        selectedProblemIds.add(id);
-        const tierInfo = mapLevelToTierInfo(level);
-        const tierIconHtml = `<img src="${tierInfo.tierIcon}" class="selected-item-icon" alt="${tierInfo.tierName}">`;
-        const listItem = document.createElement('li');
-        listItem.dataset.id = id;
-        listItem.draggable = true;
-        listItem.innerHTML = `<div class="selected-item-info">${tierIconHtml}<span>${id} - ${title}</span></div><button class="delete-btn">×</button>`;
-        selectedProblemsContainer.appendChild(listItem);
-    }
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-    async function fetchTierData(problemId) {
-        const proxyUrl = '/api/proxy?url=';
-        const solvedAcUrl = `https://solved.ac/api/v3/problem/show?problemId=${problemId}`;
-        const response = await fetch(proxyUrl + solvedAcUrl);
-        if (!response.ok) {
-            console.warn(`Solved.ac에서 ${problemId}번 티어 정보 가져오기 실패`);
-            return { tierName: "정보 없음", tierIcon: "" };
-        }
-        const data = await response.json();
-        return mapLevelToTierInfo(data.level);
-    }
-    function mapLevelToTierInfo(level) {
-        if (level === 0) return { tierName: "Unrated", tierIcon: "https://static.solved.ac/tier_small/0.svg" };
-        const tiers = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"];
-        const roman = ["V", "IV", "III", "II", "I"];
-        const tierName = `${tiers[Math.floor((level - 1) / 5)]} ${roman[(level - 1) % 5]}`;
-        const tierIcon = `https://static.solved.ac/tier_small/${level}.svg`;
-        return { tierName, tierIcon };
-    }
+
     function downloadFile(filename, content) {
         const element = document.createElement('a');
         const file = new Blob([content], { type: 'application/octet-stream' });
