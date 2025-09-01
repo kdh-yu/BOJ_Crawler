@@ -1,0 +1,74 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    background-color: #f4f7f6;
+    color: #333;
+    padding: 20px 0;
+}
+.container {
+    width: 100%;
+    max-width: 600px;
+    padding: 40px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+header h1 { font-size: 2em; margin-bottom: 10px; color: #2c3e50; }
+header p { font-size: 1.1em; color: #555; line-height: 1.6; margin-bottom: 30px; }
+
+/* 검색 입력창 */
+#problemSearchInput { width: 100%; padding: 12px 15px; font-size: 1em; border: 1px solid #ddd; border-radius: 8px; }
+#problemSearchInput:disabled { background-color: #e9ecef; cursor: not-allowed; }
+#problemSearchInput:focus { outline: none; border-color: #007BFF; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2); }
+
+/* 검색 결과창 */
+.search-results { position: absolute; width: calc(100% - 80px); max-width: 520px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin-top: 5px; text-align: left; display: none; background-color: white; z-index: 100; }
+.search-results div { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+.search-results div:last-child { border-bottom: none; }
+.search-results div:hover { background-color: #f4f7f6; }
+.search-results div span { color: #6c757d; font-size: 0.9em; margin-right: 8px; }
+.tier-icon { width: 16px; height: 16px; vertical-align: middle; margin-right: 6px; }
+
+/* 선택된 문제 목록 */
+.selection-section { margin-top: 30px; text-align: left; }
+.selection-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.selection-header h2 { margin: 0; font-size: 1.2em; }
+.clear-btn { background-color: #6c757d; color: white; border: none; border-radius: 5px; padding: 5px 10px; font-size: 0.9em; cursor: pointer; transition: background-color 0.2s; }
+.clear-btn:hover { background-color: #5a6268; }
+#selectedProblems { list-style-type: none; min-height: 50px; border: 1px dashed #ccc; border-radius: 8px; padding: 10px; }
+#selectedProblems li { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #e9f5ff; border-radius: 6px; margin-bottom: 8px; font-size: 0.95em; cursor: move; user-select: none; }
+#selectedProblems li.dragging { opacity: 0.5; }
+.selected-item-info { display: flex; align-items: center; }
+.selected-item-icon { width: 16px; height: 16px; margin-right: 8px; }
+.delete-btn { background-color: #ff4d4d; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; line-height: 22px; text-align: center; }
+.delete-btn:hover { background-color: #cc0000; }
+
+/* 버튼 그룹 스타일 */
+.button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 30px; }
+.button-group button { width: 100%; margin: 0; padding: 15px; font-size: 1.1em; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; }
+#crawlBtn { background-color: #007BFF; }
+#crawlBtn:hover { background-color: #0056b3; }
+#generateBtn { background-color: #28a745; }
+#generateBtn:hover { background-color: #218838; }
+#generateBtn:disabled { background-color: #6c757d; cursor: not-allowed; }
+
+/* 상태창 */
+#status { margin-top: 20px; font-size: 0.95em; color: #666; min-height: 20px; }
+
+/* 미리보기 영역 */
+.preview-area { margin-top: 30px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; text-align: left; background-color: #fdfdfd; min-height: 100px; }
+.preview-area h1, .preview-area h2, .preview-area h3 { border-bottom: 1px solid #eee; padding-bottom: 0.3em; margin-top: 24px; margin-bottom: 16px; }
+.preview-area table { border-collapse: collapse; }
+.preview-area th, .preview-area td { border: 1px solid #ccc; padding: 6px 13px; }
+.preview-area blockquote { margin-left: 0; padding: 0 1em; color: #6a737d; border-left: 0.25em solid #dfe2e5; }
+.preview-area pre { background-color: #f6f8fa; border-radius: 3px; padding: 16px; overflow: auto; }
+
+/* 로딩 스피너 */
+.spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.spinner { border: 6px solid #f3f3f3; border-top: 6px solid #007BFF; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

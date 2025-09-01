@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOJ 문제 -> ipynb 변환기</title>
+    <link rel="stylesheet" href="style.css?v=3"> <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="main.js"></script>
+</head>
+<body>
+    <div id="spinner" class="spinner-overlay" style="display: none;"><div class="spinner"></div></div>
+
+    <div class="container">
+        <header>
+            <h1>BOJ 문제 → ipynb 변환기 📖</h1>
+            <p>
+                아래에서 문제 번호나 제목으로 검색하고,
+                <br>원하는 문제들을 리스트에 추가하세요.
+            </p>
+        </header>
+
+        <main>
+            <div class="search-section">
+                <input type="text" id="problemSearchInput" placeholder="문제 목록을 불러오는 중..." disabled>
+                <div id="searchResults" class="search-results"></div>
+            </div>
+
+            <div class="selection-section">
+                <div class="selection-header">
+                    <h2>선택된 문제 목록</h2>
+                    <button id="clearBtn" class="clear-btn">모두 지우기</button>
+                </div>
+                <ul id="selectedProblems"></ul>
+            </div>
+            
+            <div class="button-group">
+                <button id="crawlBtn">문제 불러오기 (미리보기)</button>
+                <button id="generateBtn" disabled>ipynb 파일로 다운로드</button>
+            </div>
+
+            <div id="status"></div>
+        </main>
+
+        <div id="previewArea" class="preview-area">
+            </div>
+    </div>
+</body>
+</html>
