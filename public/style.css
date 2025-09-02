@@ -2,8 +2,8 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    flex-direction: column; /* ✨ 자식 요소를 세로로 쌓도록 변경 */
+    align-items: center;   /* ✨ 가로축(cross-axis)의 중앙으로 정렬 */
     min-height: 100vh;
     background-color: #f4f7f6;
     color: #333;
@@ -72,3 +72,28 @@ header p { font-size: 1.1em; color: #555; line-height: 1.6; margin-bottom: 30px;
 .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #007BFF; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* style.css 파일 맨 아래에 추가 */
+
+/* 푸터(워터마크) 스타일 */
+footer {
+    width: 100%;
+    max-width: 600px; /* container의 max-width와 동일하게 */
+    margin: 40px auto 20px auto; /* 상단 여백을 주고, 좌우 자동 마진으로 중앙 정렬 */
+    text-align: center;
+}
+
+footer p {
+    font-size: 0.9em;
+    color: #888;
+}
+
+footer a {
+    color: #555;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
